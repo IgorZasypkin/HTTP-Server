@@ -9,7 +9,6 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 
 public class Main {
     public static void main(String[] args) {
@@ -19,9 +18,9 @@ public class Main {
         ) {
             while (true) {
                 try {
-                //блокирующий вызов
-                final Socket socket = serverSocket.accept();
-                   handleClient(socket);
+                    //блокирующий вызов
+                    final Socket socket = serverSocket.accept();
+                    handleClient(socket);
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -40,23 +39,19 @@ public class Main {
                 final InputStream in = socket.getInputStream();
         ) {
             System.out.println(socket.getInetAddress());
-            out.write("Enter command\n".getBytes(StandardCharsets.UTF_8));
 
             final String message = readMessage(in);
 
-            switch (message) {
-                case "time":
-                    final Instant now = Instant.now();
-                    out.write(now.toString().getBytes(StandardCharsets.UTF_8));
-                    break;
-                case "shutdown":
-                    out.write("ok".getBytes(StandardCharsets.UTF_8));
-                    System.exit(200);
-                    break;
-                default:
-                    out.write("unknown command\n".getBytes(StandardCharsets.UTF_8));
-            }
-            System.out.println("message: " + message);
+            final String responce =
+                    "HTTP/1.1 200 OK\r\n" +
+                    "Connection: close\r\n" +
+                    "Content-Length: 2\r\n" +
+                    "Content-Type: text/html; charset=utf-8\r\n" +
+                    "Content-Language: en\r\n" +
+                    "\r\n" +
+                    "OK";
+
+            out.write(responce.getBytes(StandardCharsets.UTF_8));
         }
     }
 
@@ -81,7 +76,6 @@ public class Main {
                 throw new BadRequestException("CRLFCRLF not found");
             }
         }
-
         return new String(buffer,
                 0,
                 buffer.length - length,
