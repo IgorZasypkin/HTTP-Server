@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 
 
 public class Main {
@@ -44,8 +45,20 @@ public class Main {
             out.write("Enter command\n".getBytes(StandardCharsets.UTF_8));
 
             final String message = readMessage(in);
-            System.out.println("message: " + message);
 
+            switch (message) {
+                case "time":
+                    final Instant now = Instant.now();
+                    out.write(now.toString().getBytes(StandardCharsets.UTF_8));
+                    break;
+                case "shutdown":
+                    out.write("ok".getBytes(StandardCharsets.UTF_8));
+                    System.exit(200);
+                    break;
+                default:
+                    out.write("unknown command\n".getBytes(StandardCharsets.UTF_8));
+            }
+            System.out.println("message: " + message);
         }
     }
 
@@ -57,8 +70,6 @@ public class Main {
             final int read = in.read(buffer, offset, length);
             offset += read;
             length = buffer.length - offset;
-//                        final String message = new String(buffer, 0, read, StandardCharsets.UTF_8);
-//                        System.out.println("message= " + message);
             final byte lastByte = buffer[offset - 1];
 
             if (lastByte == '\n') {
@@ -69,10 +80,7 @@ public class Main {
 //                .trim();
 //
 //        return message;
-
-
         return new String(buffer, 0, buffer.length - length, StandardCharsets.UTF_8)
-                .trim();
-
+                .trim(); // тоже, что и строка 80-83.
     }
 }
