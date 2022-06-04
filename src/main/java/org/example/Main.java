@@ -1,5 +1,8 @@
 package org.example;
 
+import com.google.common.primitives.Bytes;
+import org.example.Exception.BadRequestException;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -7,7 +10,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-
 
 public class Main {
     public static void main(String[] args) {
@@ -22,12 +24,10 @@ public class Main {
                    handleClient(socket);
 
                 } catch (Exception e) {
-
                     e.printStackTrace();
                 }
             }
         } catch (IOException e) {
-
             e.printStackTrace();
             // если не удалось запустить сервер
         }
@@ -38,9 +38,7 @@ public class Main {
                 socket;
                 final OutputStream out = socket.getOutputStream();
                 final InputStream in = socket.getInputStream();
-
         ) {
-
             System.out.println(socket.getInetAddress());
             out.write("Enter command\n".getBytes(StandardCharsets.UTF_8));
 
@@ -63,6 +61,7 @@ public class Main {
     }
 
     private static String readMessage(final InputStream in) throws IOException {
+        final byte[] CLRFCLRF = {'\r', '\n', '\r', '\n'};
         final byte[] buffer = new byte[4096];
         int offset = 0;
         int length = buffer.length;
@@ -70,17 +69,23 @@ public class Main {
             final int read = in.read(buffer, offset, length);
             offset += read;
             length = buffer.length - offset;
-            final byte lastByte = buffer[offset - 1];
 
-            if (lastByte == '\n') {
+            final int headersEndIndex = Bytes.indexOf(buffer, CLRFCLRF);
+
+            if (headersEndIndex != -1) {
                 break;
             }
+
+
+            if (read == 0 || length == 0) {
+                throw new BadRequestException("CRLFCRLF not found");
+            }
         }
-//        final String message = new String(buffer, 0, buffer.length - length, StandardCharsets.UTF_8)
-//                .trim();
-//
-//        return message;
-        return new String(buffer, 0, buffer.length - length, StandardCharsets.UTF_8)
+
+        return new String(buffer,
+                0,
+                buffer.length - length,
+                StandardCharsets.UTF_8)
                 .trim(); // тоже, что и строка 80-83.
     }
 }
