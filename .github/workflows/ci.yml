@@ -19,7 +19,3 @@ jobs:
       - run: mvn -B deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/upload-artifact@v3
-        with:
-          name: app
-          path: target/*.jar
