@@ -1,4 +1,4 @@
-package org.example.Exception;
+package org.example.server.exception;
 
 public class DeadLineExceedException extends Throwable {
     public DeadLineExceedException() {

@@ -1,6 +1,7 @@
-package org.example;
+package org.example.app;
 
-import org.example.Exception.DeadLineExceedException;
+import org.example.server.exception.DeadLineExceedException;
+import org.example.server.Server;
 
 public class Main {
 
