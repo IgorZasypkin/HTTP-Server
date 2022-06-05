@@ -18,6 +18,7 @@ import java.time.Instant;
 public class Server {
 
     public static final byte[] CLRFCLRF = {'\r', '\n', '\r', '\n'};
+    public static final byte[] CRLF = {'\r', '\n'};
     private int port = 9999;
     private int soTimeout = 30 * 1000;
     private int readTimeout = 60 * 1000;
@@ -55,7 +56,8 @@ public class Server {
         ) {
             System.out.println(socket.getInetAddress());
 
-            final String message = readMessage(in);
+            final Request request = readRequest(in);
+            System.out.println("request:" + request);
 
             final String responce =
                     "HTTP/1.1 200 OK\r\n" +
@@ -70,7 +72,7 @@ public class Server {
         }
     }
 
-    private String readMessage(final InputStream in) throws IOException, DeadLineExceedException {
+    private Request readRequest(final InputStream in) throws IOException, DeadLineExceedException {
         final byte[] buffer = new byte[bufferSize];
         int offset = 0;
         int length = buffer.length;
@@ -100,10 +102,23 @@ public class Server {
                 throw new BadRequestException("CRLFCRLF not found");
             }
         }
-        return new String(buffer,
-                0,
-                buffer.length - length,
-                StandardCharsets.UTF_8)
-                .trim(); // тоже, что и строка 80-83.
+        final int requestLineEndIndex = Bytes.indexOf(buffer, CRLF);
+        if (requestLineEndIndex == -1) {
+            throw new BadRequestException("Request Line not Found");
+        }
+
+        final String requestLine = new String (buffer, 0, requestLineEndIndex, StandardCharsets.UTF_8);
+
+        System.out.println("requestLine= " + requestLine);
+        parseRequestLine(requestLine);
+
+        return  new Request();
+    }
+
+    private void parseRequestLine(final String requestLine) {
+        final String[] parts = requestLine.split(" ");
+        System.out.println("method: " + parts[0]);
+        System.out.println("path: " + parts[1]);
+        System.out.println("version: " + parts[2]);
     }
 }
