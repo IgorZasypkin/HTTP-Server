@@ -15,10 +15,16 @@ import java.time.temporal.ChronoUnit;
 
 public class Server {
 
+    public static final byte[] CLRFCLRF = {'\r', '\n', '\r', '\n'};
+    private final int port = 9999;
+    private final int soTimeout = 30 * 1000;
+    private final int readTimeout = 60 * 1000;
+    private final int bufferSize = 4096;
+
     public void start() throws DeadLineExceedException {
 
         try (
-                final ServerSocket serverSocket = new ServerSocket(9999);
+                final ServerSocket serverSocket = new ServerSocket(port);
         ) {
             while (true) {
                 try {
@@ -38,7 +44,7 @@ public class Server {
 
     private void handleClient(final Socket socket) throws IOException, DeadLineExceedException {
 
-        socket.setSoTimeout(30 * 1000);
+        socket.setSoTimeout(soTimeout);
 
         try (
                 socket;
@@ -63,12 +69,11 @@ public class Server {
     }
 
     private String readMessage(final InputStream in) throws IOException, DeadLineExceedException {
-        final byte[] CLRFCLRF = {'\r', '\n', '\r', '\n'};
-        final byte[] buffer = new byte[4096];
+        final byte[] buffer = new byte[bufferSize];
         int offset = 0;
         int length = buffer.length;
 
-        final Instant deadLine = Instant.now().plus(60, ChronoUnit.SECONDS);
+        final Instant deadLine = Instant.now().plusMillis(readTimeout);
 
         while (true) {
 
