@@ -2,6 +2,7 @@ package org.example;
 
 import com.google.common.primitives.Bytes;
 import org.example.Exception.BadRequestException;
+import org.example.Exception.DeadLineExceedException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,6 +10,8 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 public class Main {
     public static void main(String[] args) {
@@ -32,7 +35,10 @@ public class Main {
         }
     }
 
-    private static void handleClient(final Socket socket) throws IOException {
+    private static void handleClient(final Socket socket) throws IOException, DeadLineExceedException {
+
+        socket.setSoTimeout(30 * 1000);
+
         try (
                 socket;
                 final OutputStream out = socket.getOutputStream();
@@ -55,12 +61,20 @@ public class Main {
         }
     }
 
-    private static String readMessage(final InputStream in) throws IOException {
+    private static String readMessage(final InputStream in) throws IOException, DeadLineExceedException {
         final byte[] CLRFCLRF = {'\r', '\n', '\r', '\n'};
         final byte[] buffer = new byte[4096];
         int offset = 0;
         int length = buffer.length;
+
+        final Instant deadLine = Instant.now().plus(60, ChronoUnit.SECONDS);
+
         while (true) {
+
+            if(Instant.now().isAfter(deadLine)){
+                throw new DeadLineExceedException();
+            }
+
             final int read = in.read(buffer, offset, length);
             offset += read;
             length = buffer.length - offset;
@@ -71,8 +85,10 @@ public class Main {
                 break;
             }
 
+            if (read == -1)
+                throw new BadRequestException(("CLRFCLRF not found, no more data"));
 
-            if (read == 0 || length == 0) {
+            if (length == 0) {
                 throw new BadRequestException("CRLFCRLF not found");
             }
         }
