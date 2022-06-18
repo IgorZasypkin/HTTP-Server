@@ -1,9 +1,10 @@
 package org.example.server;
 
 import com.google.common.primitives.Bytes;
+import lombok.extern.slf4j.Slf4j;
 import org.example.server.exception.BadRequestException;
-import org.example.server.exception.DeadLineExceedException;
 import lombok.Setter;
+import org.example.server.exception.DeadlineExceedException;
 
 
 import java.io.IOException;
@@ -13,112 +14,133 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Handler;
 
 @Setter
+@Slf4j
 public class Server {
 
-    public static final byte[] CLRFCLRF = {'\r', '\n', '\r', '\n'};
+    public static final byte[] CRLFCRLF = {'\r', '\n', '\r', '\n'};
     public static final byte[] CRLF = {'\r', '\n'};
     private int port = 9999;
     private int soTimeout = 30 * 1000;
     private int readTimeout = 60 * 1000;
     private int bufferSize = 4096;
 
-    public void start() throws DeadLineExceedException {
+    private final Map<String, Handler> routes = new HashMap<>();
 
+    public void start() {
+        // ServerSocket
+        // Socket
+        // ctrl + alt + v - переменная
+        // ctrl + alt + f - поле
+        // ctrl + alt + c - static field
         try (
                 final ServerSocket serverSocket = new ServerSocket(port);
         ) {
             while (true) {
+                // блокирующий вызов
                 try {
-                    //блокирующий вызов
                     final Socket socket = serverSocket.accept();
                     handleClient(socket);
-
                 } catch (Exception e) {
+                    // если произошла любая проблема с клиентом
                     e.printStackTrace();
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
             // если не удалось запустить сервер
+            e.printStackTrace();
         }
     }
 
-    private void handleClient(final Socket socket) throws IOException, DeadLineExceedException {
-
-        socket.setSoTimeout(soTimeout);
-
+    private void handleClient(final Socket socket) throws Exception {
         try (
                 socket;
                 final OutputStream out = socket.getOutputStream();
-                final InputStream in = socket.getInputStream();
+                final InputStream in = socket.getInputStream()
         ) {
-            System.out.println(socket.getInetAddress());
+            socket.setSoTimeout(soTimeout);
+
+            log.debug("client ip address: {}", socket.getInetAddress());
 
             final Request request = readRequest(in);
-            System.out.println("request:" + request);
+            log.debug("request: {}", request);
 
-            final String responce =
-                    "HTTP/1.1 200 OK\r\n" +
-                            "Connection: close\r\n" +
-                            "Content-Length: 2\r\n" +
-                            "Content-Type: text/html; charset=utf-8\r\n" +
-                            "Content-Language: en\r\n" +
-                            "\r\n" +
-                            "OK";
+            final Handler handler = routes.get(request.getPath());
+            // 1. handler != null (значит, такой ключ есть)
+            // 2. handler == null (значит, ключа нет)
 
-            out.write(responce.getBytes(StandardCharsets.UTF_8));
+            if (handler == null) {
+                // Ctrl + Alt + L - форматирование
+                final String response = "HTTP/1.1 404 Not Found\r\n" +
+                        "Connection: close\r\n" +
+                        "Content-Length: 9\r\n" +
+                        "\r\n" +
+                        "Not Found";
+
+                out.write(response.getBytes(StandardCharsets.UTF_8));
+                return;
+            }
+
+            handler.handle(request, out);
         }
     }
 
-    private Request readRequest(final InputStream in) throws IOException, DeadLineExceedException {
+    private Request readRequest(final InputStream in) throws IOException {
         final byte[] buffer = new byte[bufferSize];
         int offset = 0;
         int length = buffer.length;
+        // deadline
 
-        final Instant deadLine = Instant.now().plusMillis(readTimeout);
-
+        // System.currentTimeMillis() + 60 * 1000;
+        final Instant deadline = Instant.now().plusMillis(readTimeout);
+        // внутренний цикл чтения команды
         while (true) {
-
-            if(Instant.now().isAfter(deadLine)){
-                throw new DeadLineExceedException();
+            if (Instant.now().isAfter(deadline)) {
+                throw new DeadlineExceedException();
             }
 
-            final int read = in.read(buffer, offset, length);
-            offset += read;
+            final int read = in.read(buffer, offset, length); // read - сколько байт было прочитано
+            offset += read; // offset = offset + read;
             length = buffer.length - offset;
 
-            final int headersEndIndex = Bytes.indexOf(buffer, CLRFCLRF);
-
+            final int headersEndIndex = Bytes.indexOf(buffer, CRLFCRLF);
             if (headersEndIndex != -1) {
                 break;
             }
 
-            if (read == -1)
-                throw new BadRequestException(("CLRFCLRF not found, no more data"));
+            if (read == -1) {
+                throw new BadRequestException("CRLFCRLF not found, no more data");
+            }
 
             if (length == 0) {
                 throw new BadRequestException("CRLFCRLF not found");
             }
         }
+        final Request request = new Request();
+        // TODO: fill request
         final int requestLineEndIndex = Bytes.indexOf(buffer, CRLF);
         if (requestLineEndIndex == -1) {
-            throw new BadRequestException("Request Line not Found");
+            throw new BadRequestException("Request Line not found");
         }
+        final String requestLine = new String(
+                buffer,
+                0,
+                requestLineEndIndex,
+                StandardCharsets.UTF_8
+        );
 
-        final String requestLine = new String (buffer, 0, requestLineEndIndex, StandardCharsets.UTF_8);
+        final String[] parts = requestLine.split(" ");
+        request.setMethod(parts[0]);
+        request.setPath(parts[1]);
 
-        System.out.println("requestLine= " + requestLine);
-        parseRequestLine(requestLine);
-
-        return  new Request();
+        return request;
     }
 
-    private void parseRequestLine(final String requestLine) {
-        final String[] parts = requestLine.split(" ");
-        System.out.println("method: " + parts[0]);
-        System.out.println("path: " + parts[1]);
-        System.out.println("version: " + parts[2]);
+    public void register(String path, Handler handler) {
+        routes.put(path, handler);
     }
 }

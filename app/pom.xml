@@ -33,7 +33,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>org.example.Main</mainClass>
+                            <mainClass>org.org.example.app.Main</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
@@ -51,5 +51,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

@@ -1,22 +1,23 @@
 package org.example.server.exception;
 
-public class DeadLineExceedException extends Throwable {
-    public DeadLineExceedException() {
+// Alt + Insert -> Constructor -> Ctrl + A -> Enter
+public class DeadlineExceedException extends RuntimeException {
+    public DeadlineExceedException() {
     }
 
-    public DeadLineExceedException(String message) {
+    public DeadlineExceedException(String message) {
         super(message);
     }
 
-    public DeadLineExceedException(String message, Throwable cause) {
+    public DeadlineExceedException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public DeadLineExceedException(Throwable cause) {
+    public DeadlineExceedException(Throwable cause) {
         super(cause);
     }
 
-    public DeadLineExceedException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+    public DeadlineExceedException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 }
